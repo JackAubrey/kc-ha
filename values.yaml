@@ -1,0 +1,12 @@
+global:
+  namespace: keycloak
+
+ingress:
+  admin:
+    host: kc.admin.auth.local
+    tls:
+      secretName: keycloak-admin-tls
+  public:
+    host: kc.public.auth.local
+    tls:
+      secretName: keycloak-public-tls

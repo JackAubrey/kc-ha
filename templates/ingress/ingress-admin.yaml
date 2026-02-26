@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak-admin
+  namespace: keycloak
+  annotations:
+    cert-manager.io/cluster-issuer: "selfsigned-cluster-issuer"
+#  annotations:
+#    nginx.ingress.kubernetes.io/whitelist-source-range: "127.0.0.1/32,192.168.0.0/16"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - admin.auth.localhost
+      secretName: keycloak-admin-tls
+  rules:
+    - host: admin.auth.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak-svc
+                port:
+                  number: 8080

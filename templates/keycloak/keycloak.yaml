@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: keycloak
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      affinity:
+        # ===== NODE ANTI-AFFINITY =====
+        # Evita di mettere pod simili sullo stesso nodo
+        # Questo ci assicura che se un nodo cade, le repliche di Keycloak sono vive su altri nodi
+        podAntiAffinity:
+          # regola severa: Se non può rispettarla il POD resta Pending
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  # cerca POD con questa label
+                  app: keycloak
+              # NON metterli sullo stesso hostname
+              # Ogni nodo Kubernetes ha automaticamente una label. Con il comando "kubectl get nodes --show-labels" vedremo qualcosa tipo:
+              #    > kubernetes.io/hostname=k3d-keycloak-cluster-agent-0
+              # Quella label è automatica e garantita da Kubernetes.
+              # Kubernetes usa quel valore per capire cosa significa “stesso nodo”.
+              topologyKey: "kubernetes.io/hostname"
+
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.5.0
+          args: ["start"]
+          ports:
+            - containerPort: 8080   # http
+            - containerPort: 7800   # jgroups
+            - containerPort: 9000   # management
+          env:
+            - name: KC_HTTP_PORT
+              value: "8080"
+
+            # ===== DATABASE =====
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://postgres-svc:5432/keycloak
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-db-secret
+                  key: username
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-db-secret
+                  key: password
+
+            # ===== CLUSTERING =====
+            - name: KC_CACHE
+              value: ispn
+
+            # ===== HOSTNAME & PROXY =====
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_HOSTNAME
+              value: https://auth.localhost
+            - name: KC_HOSTNAME_ADMIN
+              value: https://admin.auth.localhost
+
+            # ===== MANAGEMENT =====
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_METRICS_ENABLED
+              value: "true"
+
+            # ===== ADMIN BOOTSTRAP =====
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              value: admin
+
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "768Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 9000
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 6
