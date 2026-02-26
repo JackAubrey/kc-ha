@@ -2,18 +2,18 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-jgroups
-  namespace: keycloak
+  namespace: {{ .Values.global.namespace }}
 spec:
   podSelector:
     matchLabels:
-      app: keycloak
+      app: {{ .Values.keycloak.app.name }}
   policyTypes:
     - Ingress
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app: keycloak
+              app: {{ .Values.keycloak.app.name }}
       ports:
         - protocol: TCP
           port: 7800

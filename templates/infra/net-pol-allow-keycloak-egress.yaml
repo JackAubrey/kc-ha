@@ -2,18 +2,18 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-db
-  namespace: keycloak
+  namespace: {{ .Values.global.namespace }}
 spec:
   podSelector:
     matchLabels:
-      app: postgres
+      app: {{ .Values.postgres.app.name }}
   policyTypes:
     - Ingress
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app: keycloak
+              app: {{ .Values.keycloak.app.name }}
       ports:
         - protocol: TCP
           port: 5432
@@ -24,18 +24,18 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-keycloak-egress
-  namespace: keycloak
+  namespace: {{ .Values.global.namespace }}
 spec:
   podSelector:
     matchLabels:
-      app: keycloak
+      app: {{ .Values.keycloak.app.name }}
   policyTypes:
     - Egress
   egress:
     - to:
         - podSelector:
             matchLabels:
-              app: postgres
+              app: {{ .Values.postgres.app.name }}
       ports:
         - protocol: TCP
           port: 5432
@@ -44,7 +44,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app: keycloak
+              app: {{ .Values.keycloak.app.name }}
       ports:
         - protocol: TCP
           port: 7800

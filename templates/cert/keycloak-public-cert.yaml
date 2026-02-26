@@ -2,11 +2,11 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: keycloak-public-cert
-  namespace: keycloak
+  namespace: {{ .Values.global.namespace }}
 spec:
-  secretName: keycloak-public-tls
+  secretName: {{ .Values.ingress.public.tls.secretName }}
   issuerRef:
-    name: selfsigned-cluster-issuer
+    name: {{ .Values.global.tls.issuerRef }}
     kind: ClusterIssuer
   dnsNames:
-    - auth.localhost
+    - {{ .Values.ingress.public.host }}

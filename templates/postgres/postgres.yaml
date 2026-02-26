@@ -1,36 +1,36 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres
-  namespace: keycloak
+  name: {{ .Values.postgres.app.name }}
+  namespace: {{ .Values.global.namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres
+      app: {{ .Values.postgres.app.name }}
   template:
     metadata:
       labels:
-        app: postgres
+        app: {{ .Values.postgres.app.name }}
     spec:
       containers:
-        - name: postgres
+        - name: {{ .Values.postgres.app.name }}
           image: postgres:15
           env:
             - name: POSTGRES_DB
-              value: keycloak
+              value: {{ .Values.postgres.name }}
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-db-secret
+                  name: postgres-db-secret
                   key: username
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-db-secret
+                  name: postgres-db-secret
                   key: password
           ports:
-            - containerPort: 5432
+            - containerPort: {{ .Values.postgres.port | int }}
           resources:
             requests:
               cpu: "200m"

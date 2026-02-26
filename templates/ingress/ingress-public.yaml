@@ -2,23 +2,23 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: keycloak-public
-  namespace: keycloak
+  namespace: {{ .Values.global.namespace }}
   annotations:
-    cert-manager.io/cluster-issuer: "selfsigned-cluster-issuer"
+    cert-manager.io/cluster-issuer: "self-signed-cluster-issuer"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - auth.localhost
-      secretName: keycloak-public-tls
+        - {{ .Values.ingress.public.host }}
+      secretName: {{ .Values.ingress.public.tls.secretName }}
   rules:
-    - host: auth.localhost
+    - host: {{ .Values.ingress.public.host }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: keycloak-svc
+                name: {{ .Values.keycloak.svc.name }}
                 port:
-                  number: 8080
+                  number: {{ .Values.keycloak.app.httpPort }}

@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: keycloak-svc
-  namespace: keycloak
+  name: {{ .Values.keycloak.svc.name }}
+  namespace: {{ .Values.global.namespace }}
 spec:
   selector:
-    app: keycloak
+    app: {{ .Values.keycloak.app.name }}
   ports:
     - name: http
       port: 8080

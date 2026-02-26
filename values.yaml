@@ -1,12 +1,37 @@
 global:
-  namespace: keycloak
+  namespace: keycloak-ns
+  tls:
+    issuerRef: self-signed-cluster-issuer
 
 ingress:
   admin:
     host: kc.admin.auth.local
+    protocol: https
     tls:
       secretName: keycloak-admin-tls
   public:
     host: kc.public.auth.local
+    protocol: https
     tls:
       secretName: keycloak-public-tls
+
+keycloak:
+  app:
+    name: keycloak-app
+    replicas: 3
+    httpPort: 8080
+  svc:
+    name: keycloak-svc
+  pdb:
+    minAvailable: 2
+  db:
+    vendor: postgres
+    host: postgres-svc
+
+postgres:
+  app:
+    name: postgres-app
+  port: 5432
+  name: keycloakdb
+  svc:
+    name: postgres-svc

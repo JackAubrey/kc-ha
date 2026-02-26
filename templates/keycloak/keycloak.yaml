@@ -1,13 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: keycloak
-  namespace: keycloak
+  name: {{ .Values.keycloak.app.name }}
+  namespace: {{ .Values.global.namespace }}
 spec:
-  replicas: 3
+  replicas: {{ .Values.keycloak.app.replicas }}
   selector:
     matchLabels:
-      app: keycloak
+      app: {{ .Values.keycloak.app.name }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       labels:
-        app: keycloak
+        app: {{ .Values.keycloak.app.name }}
     spec:
       affinity:
         # ===== NODE ANTI-AFFINITY =====
@@ -28,7 +28,7 @@ spec:
             - labelSelector:
                 matchLabels:
                   # cerca POD con questa label
-                  app: keycloak
+                  app: {{ .Values.keycloak.app.name }}
               # NON metterli sullo stesso hostname
               # Ogni nodo Kubernetes ha automaticamente una label. Con il comando "kubectl get nodes --show-labels" vedremo qualcosa tipo:
               #    > kubernetes.io/hostname=k3d-keycloak-cluster-agent-0
@@ -37,31 +37,31 @@ spec:
               topologyKey: "kubernetes.io/hostname"
 
       containers:
-        - name: keycloak
+        - name: {{ .Values.keycloak.app.name }}
           image: quay.io/keycloak/keycloak:26.5.0
           args: ["start"]
           ports:
-            - containerPort: 8080   # http
+            - containerPort: {{ .Values.keycloak.app.httpPort | int }}   # http
             - containerPort: 7800   # jgroups
             - containerPort: 9000   # management
           env:
             - name: KC_HTTP_PORT
-              value: "8080"
+              value: {{ .Values.keycloak.app.httpPort | quote }}
 
             # ===== DATABASE =====
             - name: KC_DB
-              value: postgres
+              value: {{ .Values.keycloak.db.vendor }}
             - name: KC_DB_URL
-              value: jdbc:postgresql://postgres-svc:5432/keycloak
+              value: {{ printf "jdbc:postgresql://%s:%d/%s" .Values.keycloak.db.host (int .Values.postgres.port) .Values.postgres.name | quote }}
             - name: KC_DB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-db-secret
+                  name: postgres-db-secret
                   key: username
             - name: KC_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-db-secret
+                  name: postgres-db-secret
                   key: password
 
             # ===== CLUSTERING =====
@@ -74,9 +74,9 @@ spec:
             - name: KC_HTTP_ENABLED
               value: "true"
             - name: KC_HOSTNAME
-              value: https://auth.localhost
+              value: {{ printf "%s://%s" .Values.ingress.public.protocol .Values.ingress.public.host | quote }}
             - name: KC_HOSTNAME_ADMIN
-              value: https://admin.auth.localhost
+              value: {{ printf "%s://%s" .Values.ingress.admin.protocol .Values.ingress.admin.host | quote }}
 
             # ===== MANAGEMENT =====
             - name: KC_HEALTH_ENABLED
@@ -86,9 +86,15 @@ spec:
 
             # ===== ADMIN BOOTSTRAP =====
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
-              value: admin
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin-secret
+                  key: username
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD
-              value: admin
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin-secret
+                  key: password
 
           resources:
             requests:
@@ -102,7 +108,7 @@ spec:
             httpGet:
               path: /health/ready
               port: 9000
-            initialDelaySeconds: 60
+            initialDelaySeconds: 90
             periodSeconds: 10
             failureThreshold: 6
 
@@ -110,6 +116,6 @@ spec:
             httpGet:
               path: /health/live
               port: 9000
-            initialDelaySeconds: 60
+            initialDelaySeconds: 90
             periodSeconds: 15
             failureThreshold: 6
